@@ -1,0 +1,51 @@
+version: '3'
+services:
+  nginx:
+    restart: always
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - '3050:80' # 3050 totally up to you
+    depends_on:
+      - api
+      - client
+  postgres: # name of the service && start from no dependency services
+    image: 'postgres:latest'
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+  redis:
+    image: 'redis:latest'
+  api: # can name it server
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./server # look for source code only for server
+    volumes:
+      - /app/node_modules # inside the container do not override this folder
+      - ./server:/app # look at server folder and copy everthing to app folder
+    environment:
+      - REDIS_HOST=redis # the value is just name of services
+      - REDIS_PORT=6379 # need to look at DockerHub
+      - PGUSER=postgres
+      - PGHOST=postgres
+      - PGDATABASE=postgres
+      - PGPASSWORD=postgres_password
+      - PGPORT=5432
+  client:
+    stdin_open: true
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./client
+    volumes:
+      - /app/node_modules # node_modules won't override
+      - ./client:/app # everything inside would share with App folder
+  worker:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      - /app/node_modules
+      - ./worker:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
